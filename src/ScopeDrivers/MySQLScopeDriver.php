@@ -45,13 +45,25 @@ final class MySQLScopeDriver extends AbstractScopeDriver
      */
     public function orderByDistanceFrom(float $lat, float $long, string $orderDirection = 'asc')
     {
+        // Validate the order direction
         $this->checkOrderDirectionIdentifier($orderDirection);
 
-        return $this->query->orderByRaw(DB::raw($this->getOrderByDistanceSQL($orderDirection)), [
+        // Generate the raw SQL string for ordering by distance
+        if (version_compare(app()->version(), '10.0', '>')) {
+            $orderByDistanceSQL = DB::raw($this->getOrderByDistanceSQL($orderDirection))
+                ->getValue(DB::connection()->getQueryGrammar());
+        } else {
+            // Use the raw SQL string directly for older Laravel versions
+            $orderByDistanceSQL = DB::raw($this->getOrderByDistanceSQL($orderDirection));
+        }
+
+        // Apply the ordering to the query
+        return $this->query->orderByRaw($orderByDistanceSQL, [
             $long,
             $lat,
         ]);
     }
+
 
     /**
      * @param float $lat

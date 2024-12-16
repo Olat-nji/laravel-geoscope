@@ -2,6 +2,8 @@
 
 namespace Netsells\GeoScope\ScopeDrivers;
 
+use Illuminate\Support\Facades\DB;
+
 final class SQLServerScopeDriver extends AbstractScopeDriver
 {
     /**
@@ -45,9 +47,19 @@ final class SQLServerScopeDriver extends AbstractScopeDriver
     {
         $this->checkOrderDirectionIdentifier($orderDirection);
 
-        return $this->query->orderByRaw($this->getOrderByDistanceSQL($orderDirection), [
-            $lat,
+        // Generate the raw SQL string for ordering by distance
+        if (version_compare(app()->version(), '10.0', '>')) {
+            $orderByDistanceSQL = DB::raw($this->getOrderByDistanceSQL($orderDirection))
+                ->getValue(DB::connection()->getQueryGrammar());
+        } else {
+            // Use the raw SQL string directly for older Laravel versions
+            $orderByDistanceSQL = DB::raw($this->getOrderByDistanceSQL($orderDirection));
+        }
+
+        // Apply the ordering to the query
+        return $this->query->orderByRaw($orderByDistanceSQL, [
             $long,
+            $lat,
         ]);
     }
 
